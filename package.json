@@ -30,8 +30,7 @@
     "client.js",
     "cordis.patch.yml",
     "icon.svg",
-    "README.md",
-    "docs"
+    "README.md"
   ],
   "engines": {
     "dsh": "^0.2.2-rc.5"
