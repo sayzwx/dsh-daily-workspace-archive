@@ -1,0 +1,5 @@
+# dsh-daily-workspace bundle patch: mount the host half into the profile.
+# Host half = package main (index.js); browser half = ./client export (client.js).
+- insert:
+    - id: daily-workspace
+      name: dsh-daily-workspace
