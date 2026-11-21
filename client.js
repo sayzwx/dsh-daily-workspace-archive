@@ -328,6 +328,10 @@ window.__ModuleLoader__.load({
 
       useEffect(() => {
         if (!state.ready || state.defaultWorkspaceId === null) return
+        // The workspace snapshot can still be empty on the first frames after
+        // load; clearing here would erase a valid pointer. GET already
+        // validates the pointer against the Host registry.
+        if (workspaces.length === 0) return
         if (workspaces.some((workspace) => workspace.workspaceId === state.defaultWorkspaceId)) return
         void saveState(null)
       }, [state.ready, state.defaultWorkspaceId, workspaces])
@@ -413,7 +417,7 @@ window.__ModuleLoader__.load({
       const section = h('div', { className: 'dsh-dw-section' },
         h('div', { className: 'dsh-dw-head' },
           h('span', null, t('recent.title')),
-          !state.ready ? null : (defaultWorkspace ? null : h('span', { className: 'dsh-dw-muted' }, t('recent.unset')))),
+          !state.ready ? null : (defaultWorkspace || state.defaultWorkspaceId !== null ? null : h('span', { className: 'dsh-dw-muted' }, t('recent.unset')))),
         defaultWorkspace
           ? h('div', { className: 'dsh-dw-default' },
             h('span', { className: 'dsh-dw-star', 'aria-hidden': 'true' }, '★'),
@@ -422,7 +426,7 @@ window.__ModuleLoader__.load({
               ? null
               : h('span', { className: 'dsh-dw-default-name', title: defaultWorkspace.path }, defaultWorkspace.title),
             h('button', { type: 'button', className: 'dsh-dw-change', onClick: () => { setPickerOpen(true) } }, t('recent.change')))
-          : state.ready
+          : state.ready && (state.defaultWorkspaceId === null || workspaces.length > 0)
             ? h('div', { className: 'dsh-dw-card' },
               h('div', { className: 'dsh-dw-card-title' }, h('span', { 'aria-hidden': 'true' }, '☆'), t('setup.title')),
               h('div', { className: 'dsh-dw-card-body' }, t('setup.body')),
