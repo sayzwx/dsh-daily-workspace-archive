@@ -1,79 +1,77 @@
-# DSH Daily Workspace
+# dsh-monitor · 监控台
 
-给 [DeepSeek Harness](https://github.com/deepseek-ai) 一个「日常默认工作区」：新对话默认落在你选的文件夹，侧栏顶部显示最近对话；已设为默认的工作区不再在下方分组里重复出现。
+DeepSeek Harness（DSH）插件：在左侧面板列表里加一个「监控台」入口（排在「插件」上面），
+按模型和按任务查看每个模型的调用量、缓存命中率、tokens 明细与花费。
 
-侧栏结构：
-
-```text
-最近
-★ 默认工作区  Dsh-Dadlywork-Space        更改
-  最近对话 1                         15 分钟前
-  最近对话 2                            42 天前
-  查看全部 N 个对话 ›
-────────────────────────────────
-工作区
-  Agent-proj
-  DS_harness
-    …
-```
-
-默认工作区本身不会在下方「工作区」里重复出现。
+数据来自本机会话日志，不联网、不上传；装好以后历史会话会在后台自动补录。
 
 ## 功能
 
-- **任意文件夹作为默认工作区**：点「选择文件夹」会打开系统原生的目录选择器，范围是整个硬盘，且只能选文件夹。选中的路径如果还不是工作区，会自动注册为工作区，不需要先手动添加。
-- **新会话默认落点**：点顶部「新会话」或侧栏新会话按钮时，如果没有显式指定工作区，会优先使用默认工作区；显式选择的工作区永远优先，不会被改写。
-- **最近对话**：在「工作区」列表上方显示最近 5 个对话（跨工作区、按更新时间倒序，排除空白会话和子代理会话），点击直接打开；「查看全部 N 个对话」打开完整列表。
-- **未设置引导**：还没设置默认工作区时，同一位置显示引导卡片和「选择文件夹」按钮。
-- **不重复显示**：已设为默认工作区的工作区会从下方「工作区」分组中隐藏，避免和上方「最近」重复；它的历史对话仍可从「查看全部」进入。
-- **失效自动清理**：默认工作区被删除后，下次读取会清空指针并回到未设置状态。
+**概览图表**
+
+- 环形分布图：按 tokens / 调用次数 / 花费看各模型占比（前 4 个模型 + 其他）
+- 折线对比图：前 4 个模型按天的用量趋势，可切换指标
+- 都跟随右上角的时间范围（今天 / 7 天 / 30 天 / 全部）
+
+**按模型**
+
+- 每个模型一行：来源（provider）、调用次数、tokens、缓存命中率、花费
+- 同名模型不同来源分开统计（`provider::model`）
+- 点开单个模型：价格说明、每日用量柱图（tokens / 调用 / 花费可切换）、
+  tokens 构成环形图、平均每次调用 tokens / 输出 / 花费、首次与最近调用时间、未定价调用数、按任务拆分明细
+- 范围筛选：今天 / 7 天 / 30 天 / 全部
+
+**按任务**
+
+- 按项目（工作目录）分组，项目内按任务（会话）列出
+- 每个任务展开可看各模型的单独用量与命中率
+- 项目展开可看该项目的模型占比环形图与模型汇总，点模型名可跳到模型视图
+
+**计价**
+
+- 官方 DeepSeek 模型（provider 为 `deepseek` / `deepseek-account` 等）按官方价自动计算，
+  按每次调用的时间自动切换高峰 / 空闲价，无需填写：
+
+  | 模型 | 高峰（输入 / 输出 / 缓存读） | 空闲（输入 / 输出 / 缓存读） |
+  | --- | --- | --- |
+  | deepseek-flash | ¥2 / ¥8 / ¥0.04 | ¥1 / ¥4 / ¥0.02 |
+  | deepseek-v4-pro | ¥9 / ¥27 / ¥0.30 | ¥4.5 / ¥13.5 / ¥0.15 |
+
+  单位：人民币 / 百万 tokens。高峰为北京时间周一至周五 9:00-12:00、14:00-18:00。
+- 第三方 / 自定义模型在「定价」里填输入、输出、缓存读、缓存写四个单价即可；
+  没填的模型显示「未定价」，用量照常统计但不计入花费（不会假装是 ¥0）。
+- 自定义单价优先于官方价。价格与用量都可以随时改，改完立即生效。
 
 ## 安装
 
-本插件是一个 DSH bundle。把仓库放到本地后，用 DSH 的插件管理器安装，`target` 传本目录的绝对路径：
-
-```text
-plugin_manager install_bundle { "target": "C:\\path\\to\\dsh-daily-workspace" }
+```powershell
+git clone https://github.com/sayzwx/dsh-daily-workspace-archive.git dsh-monitor
 ```
 
-安装后，Desktop GUI 会加载 host 半身；浏览器半身在页面刷新后挂载。首次使用点侧栏「最近」里的「选择文件夹」，选一个日常目录即可。
+然后在 DSH 会话里让 agent 执行（或直接调用 `plugin_manager` 工具）：
 
-## 实现方式
-
-- **Host 半身**（`index.js`）：
-  - 用 `ctx.webServer.register({ kind: 'exact', path, handler })` 注册 `/dsh-daily-workspace/state`。
-  - 指针存到 `$DSH_HOME/daily-workspace.json`，只保存 `{ "defaultWorkspaceId": "..." }`，不复制会话、不创建影子工作区。
-  - GET 时用 `ctx.workspaceRegistry.get(id)` 校验工作区仍然存在；不存在则返回 `null` 并清空文件。
-- **浏览器半身**（`client.js`）：
-  - 注册到 `sidebar.session.action` HOC，用 portal 把「最近」区放到 WorkspaceBrowser 之前；不替换官方浏览区。
-  - 「选择文件夹」调用 `ctx.uiWorkspace.pickDirectory()`，再用 `ctx.workspaces.create({ path })` 按需注册工作区。
-  - 无参 `startSession` 包装成默认工作区优先；显式传入的 `workspaceId` 原样放行。
-  - 默认工作区对应的分组通过 `data-row-key="workspace:<id>"` 定位并隐藏，并在工作区切换时恢复，不修改官方文件。
-
-## 数据与隐私
-
-```text
-$DSH_HOME/daily-workspace.json
+```powershell
+plugin_manager install_bundle target:<本目录绝对路径>
 ```
 
-默认 `$DSH_HOME` 是 `%USERPROFILE%\.dsh`。文件内容只有默认工作区的 id；不包含对话内容，不上传任何数据。
+安装后刷新 DSH 窗口，左侧面板列表最上面会出现「监控台」。
 
-## HTTP 路由
+## 数据与接口
 
-- `GET  /dsh-daily-workspace/state` → `{ "ok": true, "defaultWorkspaceId": string | null }`
-- `POST /dsh-daily-workspace/state`，body `{ "workspaceId": string | null }` → 同上
+- 明细：`$DSH_HOME/dsh-monitor/usage.jsonl`，一次模型调用一行
+- 索引与价格：`$DSH_HOME/dsh-monitor/meta.json`
+- 宿主路由（本机）：
+  - `GET /dsh-monitor/data?from=&to=&task=` — 聚合后的模型 / 任务 / 项目用量
+  - `GET|POST /dsh-monitor/config` — 价格表
+  - `POST /dsh-monitor/rescan` — 重新扫描历史会话
 
-## 已知限制
+会话日志是唯一事实来源：插件监听 `session/event` 实时记账，启动时用
+`sessionPersistence` 补扫已完成的历史会话，按 `session + seq` 去重。
 
-- 「最近」区只在侧栏展开（wide）时显示，rail 态不渲染。
-- 最近列表是跨工作区的全局列表，不按当前工作区过滤。
-- 相对时间在下次状态更新时刷新，不会每分钟自动跳动。
-- 隐藏默认工作区分组依赖官方行的 `data-row-key` 与分组内联样式；如果未来 DSH 改动这两个标记，需要同步调整。
-- 未设置默认工作区时，新会话仍走 DSH 原有回退（当前会话工作区 → 最近工作区）。
+## 说明
 
-## English
-
-A DSH plugin that keeps a daily workspace: choose any folder on disk (native folder picker only), new conversations start there by default, recent conversations appear above the workspace groups, and the default workspace group is hidden to avoid duplication. Explicit workspace choices always win. State is a single `defaultWorkspaceId` in `$DSH_HOME/daily-workspace.json`.
+- 只读本机会话日志，不修改任何会话内容。
+- 花费是本地按价格表算出来的估算值，官方账单请以 DeepSeek 用量页为准（面板底部有直达链接）。
 
 ## License
 

@@ -1,22 +1,15 @@
 {
-  "name": "dsh-daily-workspace",
-  "version": "1.1.0",
-  "description": "Default daily workspace for DeepSeek Harness: new conversations open in a folder you choose, with recent conversations above the workspace groups.",
+  "name": "dsh-monitor",
+  "version": "0.1.0",
+  "description": "DeepSeek Harness 监控台：按模型、按任务查看调用量、缓存命中率与估算花费。",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/sayzwx/dsh-daily-workspace.git"
-  },
-  "homepage": "https://github.com/sayzwx/dsh-daily-workspace#readme",
-  "bugs": {
-    "url": "https://github.com/sayzwx/dsh-daily-workspace/issues"
-  },
   "keywords": [
     "deepseek-harness",
     "dsh",
     "dsh-plugin",
-    "workspace",
-    "sidebar"
+    "usage",
+    "monitor",
+    "tokens"
   ],
   "type": "module",
   "main": "index.js",
@@ -30,7 +23,8 @@
     "client.js",
     "cordis.patch.yml",
     "icon.svg",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "engines": {
     "dsh": "^0.2.2-rc.5"
@@ -44,7 +38,7 @@
       "platform": "web",
       "inject": [
         "@deepseek-ai/dsh-client-ui-sidebar",
-        "@deepseek-ai/dsh-client-ui-workspace"
+        "@deepseek-ai/dsh-client-ui-layout"
       ]
     }
   }
