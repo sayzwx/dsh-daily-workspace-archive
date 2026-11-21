@@ -45,7 +45,7 @@ DeepSeek Harness（DSH）插件：在左侧面板列表里加一个「监控台�
 ## 安装
 
 ```powershell
-git clone https://github.com/sayzwx/dsh-daily-workspace-archive.git dsh-monitor
+git clone https://github.com/sayzwx/dsh-monitor.git
 ```
 
 然后在 DSH 会话里让 agent 执行（或直接调用 `plugin_manager` 工具）：
