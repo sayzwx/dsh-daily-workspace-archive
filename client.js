@@ -573,6 +573,39 @@ window.__ModuleLoader__.load({
     /* 主面板                                                             */
     /* ------------------------------------------------------------------ */
 
+    /** 概览：模型占比环形图 + 每日趋势折线图 */
+    function Overview({ totals, shareSlices, trendSeries, days, chartMetric, onMetric, t }) {
+      const labels = [
+        ['tokens', t('metric.tokens')],
+        ['calls', t('metric.calls')],
+        ['cost', t('metric.cost')],
+      ]
+      const total = chartMetric === 'cost' ? totals.cost : chartMetric === 'calls' ? totals.calls : totals.tokens
+      return h('div', { className: 'dm-charts' },
+        h('div', { className: 'dm-card-block dm-chart-card' },
+          h('div', { className: 'dm-chart-head' },
+            h('span', { className: 'dm-chart-title' }, t('chart.share')),
+            h('div', { className: 'dm-seg', role: 'group', 'aria-label': t('chart.share') },
+              labels.map(([key, label]) => h('button', {
+                key,
+                type: 'button',
+                'data-on': chartMetric === key ? 'true' : 'false',
+                onClick: () => onMetric(key),
+              }, label)))),
+          h(Donut, {
+            slices: shareSlices,
+            metric: chartMetric,
+            size: 156,
+            center: { value: fmtMetric(total, chartMetric), label: t('chart.total') },
+            t,
+          })),
+        h('div', { className: 'dm-card-block dm-chart-card' },
+          h('div', { className: 'dm-chart-head' },
+            h('span', { className: 'dm-chart-title' }, t('chart.trend')),
+            h('span', { className: 'dm-muted', style: { fontSize: '11px' } }, t('chart.trend.note'))),
+          h(TrendChart, { series: trendSeries, days, metric: chartMetric, t })))
+    }
+
     function MonitorPanel({ locale }) {
       const snapshot = useSyncExternalStore(
         (fn) => locale.subscribe(fn),
@@ -828,41 +861,17 @@ window.__ModuleLoader__.load({
           h('div', { className: 'dm-card-value' }, fmtInt(totals.projects)),
           h('div', { className: 'dm-card-note' }, t('stat.projects.note', { tasks: fmtInt(totals.tasks) }))))
 
-      const chartMetricLabels = [
-        ['tokens', t('metric.tokens')],
-        ['calls', t('metric.calls')],
-        ['cost', t('metric.cost')],
-      ]
-
-      const overview = totals && totals.calls > 0 && !currentModel && h('div', { className: 'dm-charts' },
-        h('div', { className: 'dm-card-block dm-chart-card' },
-          h('div', { className: 'dm-chart-head' },
-            h('span', { className: 'dm-chart-title' }, t('chart.share')),
-            h('div', { className: 'dm-seg', role: 'group', 'aria-label': t('chart.share') },
-              chartMetricLabels.map(([key, label]) => h('button', {
-                key,
-                type: 'button',
-                'data-on': chartMetric === key ? 'true' : 'false',
-                onClick: () => setChartMetric(key),
-              }, label)))),
-          h(Donut, {
-            slices: shareSlices,
-            metric: chartMetric,
-            size: 156,
-            center: {
-              value: fmtMetric(
-                chartMetric === 'cost' ? totals.cost : chartMetric === 'calls' ? totals.calls : totals.tokens,
-                chartMetric,
-              ),
-              label: t('chart.total'),
-            },
-            t,
-          })),
-        h('div', { className: 'dm-card-block dm-chart-card' },
-          h('div', { className: 'dm-chart-head' },
-            h('span', { className: 'dm-chart-title' }, t('chart.trend')),
-            h('span', { className: 'dm-muted', style: { fontSize: '11px' } }, t('chart.trend.note'))),
-          h(TrendChart, { series: trendSeries, days: daySeries, metric: chartMetric, t })))
+      const overview = totals && totals.calls > 0 && !currentModel
+        ? h(Overview, {
+          totals,
+          shareSlices,
+          trendSeries,
+          days: daySeries,
+          chartMetric,
+          onMetric: setChartMetric,
+          t,
+        })
+        : null
 
       const tabs = h('div', { className: 'dm-tabs', role: 'tablist' },
         h('button', {
